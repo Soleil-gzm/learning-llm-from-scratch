@@ -13,17 +13,3 @@ learning-llm-from-scratch/ (你的GitHub仓库)
 ├── references/           # 存放你整理的关键参考资料链接
 └── README.md             # 仓库的总入口，介绍你的学习目标、进度和心
 
-## 项目结构
-
-```
-├── .gitignore
-├── .vscode
-│   └── settings.json
-├── Chapter6_
-│   └── Chapter6_data_processing_and_data_enhancement
-│       ├── .ipynb_checkpoints
-│       │   └── Untitled-checkpoint.ipynb
-│       └── Untitled.ipynb
-├── README.md
-└── test.py
-```
