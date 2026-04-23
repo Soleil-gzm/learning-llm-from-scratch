@@ -3,7 +3,7 @@
 #       3、计算相似度
 # 步骤： 1、准备数据，并读取
 
-from turtle import pd
+import pandas as pd
 from openai import OpenAI
 
 df = pd.read_csv('datas/fine_food_reviews_1k.csv',index_col=0)
