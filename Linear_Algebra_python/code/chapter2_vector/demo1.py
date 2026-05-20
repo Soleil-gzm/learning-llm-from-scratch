@@ -50,5 +50,30 @@ print(n)
 print("\n广播加法:\n",m+n)
 
 # 向量的幅度和单位向量
-print("\n向量的幅度和单位向量:\n")
+print("\n向量的幅度和单位向量:")
+v_m=np.array([1,2,3,7,8,9])
+v_dim=len(v)  # dimensionality
+v_mag=np.linalg.norm(v_m)
 
+print("v_m:",v_m)
+print("v_dim:",v_dim)
+print("v_mag:",v_mag)
+
+# 向量点积 dot product or inner product
+print("\n向量点积:")
+v_dot = np.array([1,2,3,4])
+w_dot = np.array([5,6,7,8])
+product = np.dot(v_dot,w_dot)
+print("dot(v_dot,w_dot) =",product)
+
+# 两个向量和的点积分配律：
+a_dot = np.array([0,1,2])
+b_dot = np.array([3,5,8])
+c_dot = np.array([13,21,34])
+
+# 点积满足分配律
+print("\n点积满足分配律:")
+res1 = np.dot(a_dot,b_dot+c_dot)
+res2 = np.dot(a_dot,b_dot)+np.dot(a_dot,c_dot)
+print("dot(a_dot,b_dot+c_dot):",res1)
+print("dot(a_dot,b_dot)+np.dot(a_dot,c_dot):",res2)

@@ -13,3 +13,35 @@ learning-llm-from-scratch/ (你的GitHub仓库)
 ├── references/           # 存放你整理的关键参考资料链接
 └── README.md             # 仓库的总入口，介绍你的学习目标、进度和心
 
+
+
+## 项目结构
+
+```
+├── .gitignore
+├── .vscode
+│   └── settings.json
+├── LLM_code
+│   ├── class2
+│   │   └── BERT.md
+│   └── class_1
+│       └── openai_models
+│           ├── __init__.py
+│           ├── demo1.py
+│           └── demo2.py
+├── Linear_Algebra_python
+│   ├── Linear_Algebra_README.md
+│   ├── code
+│   │   └── chapter2_vector
+│   │       ├── demo1.py
+│   │       └── demo2.py
+│   └── datas
+│       └── LinAlg4DataScience
+├── README.md
+├── generate_structure.py
+├── notes
+│   └── note.txt
+├── raw
+│   └── raw.txt
+└── test.py
+```
