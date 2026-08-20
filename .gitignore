@@ -1,4 +1,5 @@
 .vscode/
 test.py
-
+AI_Angent/.env
+AI_Angent/LLM.ipynb
 
