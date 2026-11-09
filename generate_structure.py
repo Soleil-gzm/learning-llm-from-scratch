@@ -1,78 +1,134 @@
-import os
+import json
+import shutil
 import subprocess
+from datetime import datetime
+from pathlib import Path
 
-def get_git_tracked_files(project_path):
-    """返回 Git 跟踪的文件列表（相对于项目根目录）"""
-    try:
+
+ROOT = Path(__file__).parent
+TARGET_FILE = ROOT / "src" / "cart.py"
+TRACE_FILE = ROOT / "trace.json"
+
+
+PATCH_PROPOSAL = '''from decimal import Decimal, ROUND_HALF_UP
+
+
+def money(value):
+    return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def calculate_total(items, user_type="normal"):
+    """
+    items: [{"price": "60.00", "qty": 2}]
+    rules:
+    - subtotal >= 100: minus 10
+    - vip user: 5% off after threshold discount
+    - return Decimal with 2 decimal places
+    """
+    total = Decimal("0.00")
+
+    for item in items:
+        price = Decimal(str(item["price"]))
+        qty = int(item["qty"])
+
+        if price < 0:
+            raise ValueError("price must not be negative")
+
+        if qty < 0:
+            raise ValueError("qty must not be negative")
+
+        total += price * qty
+
+    if total >= Decimal("100.00"):
+        total -= Decimal("10.00")
+
+    if user_type == "vip":
+        total = total * Decimal("0.95")
+
+    return money(total)
+'''
+
+
+class Harness:
+    def __init__(self):
+        self.trace = {
+            "task": "fix money calculation without float",
+            "started_at": datetime.utcnow().isoformat() + "Z",
+            "steps": [],
+        }
+
+    def log(self, step_type, **kwargs):
+        record = {"type": step_type, **kwargs}
+        self.trace["steps"].append(record)
+        print(json.dumps(record, ensure_ascii=False))
+
+    def run(self, command):
+        self.log("run_command", command=command)
         result = subprocess.run(
-            ['git', 'ls-files'],
-            cwd=project_path,
-            capture_output=True,
+            command,
+            cwd=ROOT,
+            shell=True,
             text=True,
-            check=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
-        files = result.stdout.strip().splitlines()
-        return [f for f in files if f]  # 过滤空行
-    except subprocess.CalledProcessError:
-        print("错误：当前目录不是 Git 仓库或 git 命令不可用")
-        return []
+        self.log(
+            "command_result",
+            exit_code=result.returncode,
+            output_tail=result.stdout[-1200:],
+        )
+        return result.returncode == 0
 
-def build_tree(files):
-    """从文件列表构建树形结构字符串"""
-    tree = {}
-    for file_path in files:
-        parts = file_path.split('/')
-        current = tree
-        for part in parts:
-            if part not in current:
-                current[part] = {}
-            current = current[part]
-    
-    lines = []
-    def walk(node, prefix=''):
-        items = list(node.items())
-        for i, (name, subnode) in enumerate(items):
-            is_last = (i == len(items) - 1)
-            connector = '└── ' if is_last else '├── '
-            lines.append(f"{prefix}{connector}{name}")
-            if subnode:
-                extension = '    ' if is_last else '│   '
-                walk(subnode, prefix + extension)
-    walk(tree)
-    return lines
+    def read_file(self, path):
+        self.log("read_file", path=str(path.relative_to(ROOT)))
+        return path.read_text(encoding="utf-8")
 
-def main():
-    project_path = "/home/GUO_Zimeng/coding/Large_language_model_learning_project"     # 替换成自己的项目路径
-    readme_path = os.path.join(project_path, "README.md")
-    print(f"README 文件路径: {readme_path}")
-    print(f"文件是否存在: {os.path.exists(readme_path)}")
-    
-    files = get_git_tracked_files(project_path)
-    if not files:
-        print("未获取到 Git 跟踪的文件")
-        return
-    print(f"获取到 {len(files)} 个文件")
-    
-    tree_lines = build_tree(files)
-    structure_text = "\n".join(tree_lines)
-    print("生成的目录树预览（前10行）：")
-    for line in tree_lines[:10]:
-        print(line)
-    
-    # 追加到 README.md
-    with open(readme_path, 'a', encoding='utf-8') as f:
-        f.write("\n\n## 项目结构\n\n```\n")
-        f.write(structure_text)
-        f.write("\n```\n")
-    
-    print(f"✅ 已追加到 {readme_path}")
-    # 验证写入
-    with open(readme_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-        if "项目结构（Git 跟踪）" in content:
-            print("验证成功：内容已写入")
-        else:
-            print("验证失败：未找到写入标记")
+    def write_file(self, path, content):
+        allowed = path.resolve() == TARGET_FILE.resolve()
+        if not allowed:
+            raise PermissionError(f"Not allowed to write {path}")
+
+        self.log("write_file", path=str(path.relative_to(ROOT)))
+        path.write_text(content, encoding="utf-8")
+
+    def save_trace(self, status):
+        self.trace["finished_at"] = datetime.utcnow().isoformat() + "Z"
+        self.trace["final_status"] = status
+        TRACE_FILE.write_text(
+            json.dumps(self.trace, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    def execute(self):
+        backup = TARGET_FILE.with_suffix(".py.bak")
+        shutil.copyfile(TARGET_FILE, backup)
+
+        try:
+            self.read_file(TARGET_FILE)
+
+            baseline_ok = self.run("python -m pytest -q")
+            if baseline_ok:
+                self.log("baseline", message="tests already pass")
+                self.save_trace("already_passed")
+                return
+
+            self.write_file(TARGET_FILE, PATCH_PROPOSAL)
+
+            fixed_ok = self.run("python -m pytest -q")
+            if not fixed_ok:
+                shutil.copyfile(backup, TARGET_FILE)
+                self.log("rollback", reason="tests failed after patch")
+                self.save_trace("failed_and_rolled_back")
+                return
+
+            self.run("python -m py_compile src/cart.py")
+            self.log("done", message="patch accepted because tests passed")
+            self.save_trace("passed")
+
+        finally:
+            if backup.exists():
+                backup.unlink()
+
 
 if __name__ == "__main__":
-    main()
+    Harness().execute()

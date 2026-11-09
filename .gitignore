@@ -2,4 +2,9 @@
 test.py
 AI_Angent/.env
 AI_Angent/LLM.ipynb
+AI_Angent/models/
+AI_Angent/model/
+*__pycache__*
 
+AI_Agent/model/
+AI_Agent/.env
